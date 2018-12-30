@@ -15,9 +15,12 @@
 int loadShaders(const GLchar* source, GLenum shaderType );
 bool vecIntersect(glm::vec4& vec1,glm::vec4& vec2);
 bool vecContains(glm::vec4 r1, glm::vec4 r2); //returns true if r2 contains r1
-bool pointInVec(glm::vec4 vec1, double x, double y);
+bool pointInVec(const glm::vec4& vec1, double x, double y, double angle = 0); //angle of vec1 is by default 0
+bool lineInVec(const glm::vec2& p1, const glm::vec2& p2, const  glm::vec4& r1, double angle = 0); //angle of r1 is by default 0
 class RenderProgram;
 void drawLine(RenderProgram& program,glm::vec3 color,const std::vector<std::pair<glm::vec2,glm::vec2>>& points);
+glm::vec2 rotatePoint(const glm::vec2& p, const glm::vec2& rotateAround, double angle);
+void drawRectangle(RenderProgram& program, const glm::vec3& color, const glm::vec4& rect, double angle);
 
 
 class RenderProgram

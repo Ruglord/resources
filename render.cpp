@@ -10,19 +10,125 @@
 #include "render.h"
 
 
+struct RotateRect
+{
+    glm::vec4 rect;
+    double angle;
+};
+
 bool vecIntersect(glm::vec4& vec1,glm::vec4& vec2)
 {
     return (vec1.x <= vec2.x + vec2.z && vec1.x + vec1.z>= vec2.x && vec1.y <= vec2.y + vec2.a && vec1.y + vec1.a >= vec2.y);
 }
 
-bool pointInVec(glm::vec4 vec1, double x, double y)
+bool pointInVec(const glm::vec4& vec1, double x, double y, double angle)
 {
-    return (vec1.x <= x && vec1.x + vec1.z >= x) && (vec1.y <= y && vec1.y + vec1.a >= y);
+    glm::vec2 center = {vec1.x + vec1.z/2, vec1.y+vec1.a/2};
+    glm::vec2 rotated = rotatePoint({x,y},center,angle);
+    return rotated.x >= vec1.x && rotated.x <= vec1.x + vec1.z && rotated.y >= vec1.y && rotated.y <= vec1.y +vec1.a;
+}
+
+glm::vec2 rotatePoint(const glm::vec2& p, const glm::vec2& rotateAround, double angle)
+{
+    glm::vec2 point = {p.x - rotateAround.x,p.y-rotateAround.y};
+    return {point.x*cos(angle)-point.y*sin(angle)+rotateAround.x, point.x*sin(angle) + point.y*cos(angle)+rotateAround.y};
+}
+
+bool lineInLine(const glm::vec2& a1, const glm::vec2& a2, const glm::vec2& b1, const glm::vec2& b2)
+{
+    glm::vec2 intersect = {0,0};
+    glm::vec2 nonVert = {0,0}; //this equals the slope and yInt of the line that is not vertical, or line b1-b2 if neither are vertical.
+    if (a1.x - a2.x == 0 && b1.x - b2.x == 0)
+    {
+        double highest = std::min(a1.y,a2.y);
+        return abs(highest - std::min(b1.y,b2.y)) >= abs((highest - (a1.y + a2.y - highest)));
+    }
+    else
+    {
+        double slope1 = 0;
+        double yInt1 = 0;
+        if (a1.x - a2.x != 0)
+        {
+            slope1 = (a1.y - a2.y)/(a1.x-a2.x);
+            yInt1 = a1.y - slope1*a1.x;
+            nonVert.x = slope1;
+            nonVert.y = yInt1;
+        }
+        else
+        {
+            intersect.x = a1.x;
+        }
+        double slope2 = 0;
+        double yInt2 = 0;
+        if (b1.x - b2.x != 0)
+        {
+            slope2 = (b1.y - b2.y)/(b1.x - b2.x);
+            yInt2 = b1.y - slope2*b1.x;
+            nonVert.x = slope2;
+            nonVert.y = yInt2;
+        }
+        else
+        {
+            intersect.x = b1.x;
+        }
+        if (b1.x != b2.x && a1.x != a2.x)
+        {
+            if (slope1 == slope2)
+            {
+                if (yInt1 == yInt2)
+                {
+                    double left = std::min(a1.x, a2.x);
+                    double right = std::max(a1.x, a2.x);
+                    return (b1.x <= right && b1.x >= left) || (b2.x <= right && b2.x >= left);
+                }
+                return false;
+            }
+                intersect.x = (yInt1 - yInt2)/(slope2 - slope1);
+        }
+
+    }
+
+    intersect.y = nonVert.x*intersect.x + nonVert.y;
+    return intersect.x >= std::min(a1.x, a2.x) && intersect.x <= std::max(a1.x, a2.x) &&
+            intersect.x >= std::min(b1.x, b2.x) && intersect.x <= std::max(b1.x,b2.x) &&
+            intersect.y >= std::min(a1.y, a2.y) - .001 && intersect.y <= std::max(a1.y, a2.y) + .001 && //rounding errors lol
+            intersect.y >= std::min(b1.y, b2.y) -.001 && intersect.y <= std::max(b1.y, b2.y) + .001;
+
+
+
+
+}
+extern RenderProgram lineProgram;
+bool lineInVec(const glm::vec2& point1,const glm::vec2& point2, const glm::vec4& r1, double angle) //given points p1 and p2, with p1 having the lesser x value, this draws a line between the 2 points and checks t
+{                                                                                                    //see if that line intersects with any of the sides of r1.
+    glm::vec2 center = {r1.x + r1.z/2, r1.y + r1.a/2};
+
+    glm::vec2 p1 = rotatePoint(point1,center,-angle);
+    glm::vec2 p2 = rotatePoint(point2,center,-angle);
+
+    glm::vec4 points = {std::min(p1.x,p2.x),std::min(p1.y,p2.y),std::max(p1.x,p2.x),std::max(p1.y,p2.y)};
+
+    glm::vec2 topLeft = {r1.x, r1.y};
+    glm::vec2 topRight = {r1.x + r1.z, r1.y};
+    glm::vec2 botLeft = {r1.x, r1.y + r1.a};
+    glm::vec2 botRight = {r1.x + r1.z, r1.y + r1.a};
+
+    return lineInLine(topLeft,topRight,p1,p2) || lineInLine(topRight, botRight, p1, p2) ||
+            lineInLine(topLeft, botLeft, p1, p2) || lineInLine(botLeft, botRight, p1, p2);
 }
 
 bool vecContains(glm::vec4 r1, glm::vec4 r2)
 {
     return (r1.x > r2.x && r1.x + r1.z < r2.x + r2.z && r1.y > r2.y && r1.y + r1.a < r2.y + r2.a);
+}
+
+void drawRectangle(RenderProgram& program, const glm::vec3& color, const glm::vec4& rect, double angle)
+{
+    glm::vec2 center = {rect.x+rect.z/2,rect.y+rect.a/2};
+       drawLine(program,color,{std::make_pair<glm::vec2,glm::vec2>(rotatePoint({rect.x,rect.y},center,angle),{rotatePoint({rect.x+rect.z,rect.y},center,angle)}),
+                                std::make_pair<glm::vec2,glm::vec2>(rotatePoint({rect.x,rect.y},center,angle),{rotatePoint({rect.x,rect.y+rect.a},center,angle)}),
+                                std::make_pair<glm::vec2,glm::vec2>(rotatePoint({rect.x,rect.y+rect.a},center,angle),{rotatePoint({rect.x+rect.z,rect.y+rect.a},center,angle)}),
+                                std::make_pair<glm::vec2,glm::vec2>(rotatePoint({rect.x+rect.z,rect.y},center,angle),{rotatePoint({rect.x+rect.z,rect.y+rect.a},center,angle)})});
 }
 
 int loadShaders(const GLchar*source, GLenum shaderType )
@@ -94,7 +200,7 @@ glEnableVertexAttribArray(0);
     program.setVec3fv("color",color);
 
     program.use();
-    glDrawArraysInstanced(GL_LINES,0,4,2);
+    glDrawArraysInstanced(GL_LINES,0,size*2,size);
 
 }
 RenderProgram::RenderProgram(std::string vertexPath, std::string fragmentPath)
