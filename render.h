@@ -52,7 +52,6 @@ struct SpriteParameter //stores a bunch of information regarding how to render t
 class Sprite
 {
     int width = 0, height = 0;
-    int screenWidth = 0, screenHeight = 0;
     unsigned int texture = -1;
     float values[16] = {
     -1, 1, 0, 1,
@@ -61,7 +60,7 @@ class Sprite
     1, -1, 1, 0
 
     };
-    float modified[16] = { //values except not const, so it can be modified
+    std::vector<float> modified = { //values except not const, so it can be modified
     -1, 1, 0, 1,
     1, 1, 1, 1,
     -1, -1, 0, 0,
@@ -71,28 +70,28 @@ class Sprite
     int indices[6] = {
     0,1,3,
     0,2,3
-
-
+    };
+    std::vector<float> modIndices = {
+    0,1,3,
+    0,2,3
     };
     glm::vec3 tint;
     unsigned int VBO=-1, VAO=-1;
     void load(std::string source,bool transparent);
 public:
-    Sprite(int stanWidth, int stanHeight, std::string source, bool transparent);
+    Sprite(std::string source, bool transparent);
     Sprite()
     {
         texture = -1;
     }
-    void init(int stanWidth, int stanHeight, std::string source, bool transparent);
+    void init(std::string source, bool transparent);
     void loadBuffers() const;
   //  virtual void render(RenderProgram& program, SpriteParameter parameter);
-    void setPortion(double x, double y, double w, double h );
-    void mirror();
-    void flip();
     virtual void renderInstanced(RenderProgram& program, const std::vector<SpriteParameter>& parameters);
     unsigned int getVAO();
     void reset(); //clears all buffers and resets modified back to values
     void setTint(glm::vec3 color);
+   // void map(RenderProgram& program,double width, double height,const glm::vec4& base, const std::vector<glm::vec2>& points);
 };
 
 class Sprite9 : public Sprite // This sprite has been split into 9 sections that each scale differently.
@@ -101,12 +100,12 @@ class Sprite9 : public Sprite // This sprite has been split into 9 sections that
     glm::vec2 widths; //the widths of the frame on either side;
     glm::vec2 heights; //heights of the frame on either side;
 public:
-    Sprite9(int stanWidth, int stanHeight, std::string source, bool transparent, glm::vec2 W, glm::vec2 H);
+    Sprite9(std::string source, bool transparent, glm::vec2 W, glm::vec2 H);
     Sprite9()
     {
 
     }
-    void init(int stanWidth, int stanHeight, std::string source, bool transparent, glm::vec2 W, glm::vec2 H);
+    void init(std::string source, bool transparent, glm::vec2 W, glm::vec2 H);
     void renderInstanced(RenderProgram& program, const std::vector<SpriteParameter>& parameters);
 
 };

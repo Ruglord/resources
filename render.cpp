@@ -275,59 +275,45 @@ void RenderProgram::setVec4fv(std::string name,glm::vec4 value)
         glBindBuffer(GL_ARRAY_BUFFER,0);
     }
 
-Sprite::Sprite(int stanWidth, int stanHeight, std::string source, bool transparent)
+Sprite::Sprite( std::string source, bool transparent)
     {
-        init(stanWidth,stanHeight,source,transparent);
+        init(source,transparent);
     }
 void Sprite::setTint(glm::vec3 color)
 {
     tint = color;
 }
-void Sprite::init(int stanWidth, int stanHeight, std::string source, bool transparent)
+void Sprite::init(std::string source, bool transparent)
     {
         load(source, transparent);
-        screenWidth = stanWidth;
-        screenHeight = stanHeight;
     }
 void Sprite::loadBuffers() const
 {
            //glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER,VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(modified), modified, GL_STATIC_DRAW);
+        int size = modified.size();
+        float verticies[size];
+        for (int i = 0; i < size; i ++)
+        {
+            verticies[i] = modified[i];
+        }
+        glBufferData(GL_ARRAY_BUFFER, sizeof(float)*size, verticies, GL_STATIC_DRAW);
         glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,0,0);
-            glEnableVertexAttribArray(0);
-}
-void Sprite::setPortion(double x, double y, double w, double h) //sets the portion. Assumes that the 4 variables are STANDARDIZED
-{
-    glm::vec4 portion = {x,y,w,h};
-    for (int i = 0; i < 8; ++i)
-    {
-        modified[i%2+2 + i/2*4] = portion.x*(i == 0 || i == 4) + portion.y*(i == 1 || i == 3) + (portion.x + portion.z)*(i == 2 || i == 6) + (portion.y + portion.a)*(i == 5 || i == 7);
-    }
-}
-void Sprite::mirror()
-{
-    for (int i = 0; i < 4;++i)
-    {
-        int first = i*4+2;
-        modified[first] = ((int)modified[first]+1)%2;
-    }
-}
-void Sprite::flip() //flips the sprite vertically
-{
-    for (int i = 0; i < 4;++i)
-    {
-        int first = i*4+3;
-        modified[first] = ((int)modified[first]+1)%2;
-    }
+        glEnableVertexAttribArray(0);
 }
 void Sprite::reset()
 {
     glBindVertexArray(0);
 glBindBuffer(GL_ARRAY_BUFFER,0);
+modified.clear();
     for (int i = 0; i < 16; i ++)
     {
-        modified[i] = values[i];
+        modified.push_back(values[i]);
+    }
+modIndices.clear();
+    for (int i = 0; i < 6; i ++)
+    {
+        modIndices.push_back(indices[i]);
     }
     tint = {1,1,1};
 }
@@ -399,7 +385,13 @@ glVertexAttribDivisor(7,1);
 loadBuffers();
 
 glBindTexture(GL_TEXTURE_2D,texture);
-glDrawElementsInstanced(GL_TRIANGLES,6,GL_UNSIGNED_INT,&indices,size);
+int sizeI = modIndices.size();
+int index[sizeI];
+for (int i = 0; i < sizeI; i ++)
+{
+    index[i] = modIndices[i];
+}
+glDrawElementsInstanced(GL_TRIANGLES,sizeI,GL_UNSIGNED_INT,&index,size);
 glBindVertexArray(0);
 glBindBuffer(GL_ARRAY_BUFFER,0);
 reset();
@@ -416,19 +408,20 @@ glDeleteBuffers(1,&parts);
     }*/
 }
 
+
 unsigned int Sprite::getVAO()
 {
     return VAO;
 }
 
-Sprite9::Sprite9(int stanWidth, int stanHeight, std::string source, bool transparent, glm::vec2 W, glm::vec2 H) : Sprite(stanWidth, stanHeight, source, transparent)
+Sprite9::Sprite9(std::string source, bool transparent, glm::vec2 W, glm::vec2 H) : Sprite(source, transparent)
 {
     widths = W;
     heights = H;
 }
-void Sprite9::init(int stanWidth, int stanHeight, std::string source, bool transparent, glm::vec2 W, glm::vec2 H)
+void Sprite9::init(std::string source, bool transparent, glm::vec2 W, glm::vec2 H)
 {
-    Sprite::init(stanWidth,stanHeight,source, transparent);
+    Sprite::init(source, transparent);
     widths = W;
     heights = H;
 }
