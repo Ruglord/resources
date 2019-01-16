@@ -332,6 +332,7 @@ void Sprite::flip() //flips the sprite vertically
         int first = i*4+3;
         modified[first] = ((int)modified[first]+1)%2;
     }
+}
 void Sprite::renderInstanced(RenderProgram& program, const std::vector<SpriteParameter>& parameters)
 {
        // if (true)
