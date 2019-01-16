@@ -317,7 +317,21 @@ modIndices.clear();
     }
     tint = {1,1,1};
 }
-
+void Sprite::mirror()
+{
+    for (int i = 0; i < 4;++i)
+    {
+        int first = i*4+2;
+        modified[first] = ((int)modified[first]+1)%2;
+    }
+}
+void Sprite::flip() //flips the sprite vertically
+{
+    for (int i = 0; i < 4;++i)
+    {
+        int first = i*4+3;
+        modified[first] = ((int)modified[first]+1)%2;
+    }
 void Sprite::renderInstanced(RenderProgram& program, const std::vector<SpriteParameter>& parameters)
 {
        // if (true)

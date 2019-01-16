@@ -91,6 +91,8 @@ public:
     unsigned int getVAO();
     void reset(); //clears all buffers and resets modified back to values
     void setTint(glm::vec3 color);
+    void mirror();
+    void flip();
    // void map(RenderProgram& program,double width, double height,const glm::vec4& base, const std::vector<glm::vec2>& points);
 };
 
