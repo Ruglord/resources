@@ -9,6 +9,8 @@
 
 #include "render.h"
 
+RenderProgram RenderProgram::basicProgram;
+RenderProgram RenderProgram::lineProgram;
 
 struct RotateRect
 {
@@ -24,7 +26,7 @@ bool vecIntersect(glm::vec4& vec1,glm::vec4& vec2)
 bool pointInVec(const glm::vec4& vec1, double x, double y, double angle)
 {
     glm::vec2 center = {vec1.x + vec1.z/2, vec1.y+vec1.a/2};
-    glm::vec2 rotated = rotatePoint({x,y},center,angle);
+    glm::vec2 rotated = rotatePoint({x,y},center,-angle);
     return rotated.x >= vec1.x && rotated.x <= vec1.x + vec1.z && rotated.y >= vec1.y && rotated.y <= vec1.y +vec1.a;
 }
 
@@ -32,6 +34,17 @@ glm::vec2 rotatePoint(const glm::vec2& p, const glm::vec2& rotateAround, double 
 {
     glm::vec2 point = {p.x - rotateAround.x,p.y-rotateAround.y};
     return {point.x*cos(angle)-point.y*sin(angle)+rotateAround.x, point.x*sin(angle) + point.y*cos(angle)+rotateAround.y};
+}
+
+bool inLine(const glm::vec2& point, const glm::vec2& point1, const glm::vec2& point2) //line 1 and line 2 are the points of the line
+{
+    if (point1.x == point2.x)
+    {
+        return point1.x == point.x && point.y >= std::min(point1.y,point2.y) && point.y <= std::max(point1.y,point2.y);
+    }
+    double slope = (point2.y - point1.y)/(point2.x - point1.x);
+    double yInt = point1.y - slope*point1.x;
+    return slope*point.x + yInt == point.y && point.x >= std::min(point1.x,point2.x) && point.x <= std::max(point1.x,point2.x);
 }
 
 bool lineInLine(const glm::vec2& a1, const glm::vec2& a2, const glm::vec2& b1, const glm::vec2& b2)
@@ -98,7 +111,6 @@ bool lineInLine(const glm::vec2& a1, const glm::vec2& a2, const glm::vec2& b1, c
 
 
 }
-extern RenderProgram lineProgram;
 bool lineInVec(const glm::vec2& point1,const glm::vec2& point2, const glm::vec4& r1, double angle) //given points p1 and p2, with p1 having the lesser x value, this draws a line between the 2 points and checks t
 {                                                                                                    //see if that line intersects with any of the sides of r1.
     glm::vec2 center = {r1.x + r1.z/2, r1.y + r1.a/2};
@@ -125,45 +137,16 @@ bool vecContains(glm::vec4 r1, glm::vec4 r2)
 void drawRectangle(RenderProgram& program, const glm::vec3& color, const glm::vec4& rect, double angle)
 {
     glm::vec2 center = {rect.x+rect.z/2,rect.y+rect.a/2};
-       drawLine(program,color,{std::make_pair<glm::vec2,glm::vec2>(rotatePoint({rect.x,rect.y},center,angle),{rotatePoint({rect.x+rect.z,rect.y},center,angle)}),
-                                std::make_pair<glm::vec2,glm::vec2>(rotatePoint({rect.x,rect.y},center,angle),{rotatePoint({rect.x,rect.y+rect.a},center,angle)}),
-                                std::make_pair<glm::vec2,glm::vec2>(rotatePoint({rect.x,rect.y+rect.a},center,angle),{rotatePoint({rect.x+rect.z,rect.y+rect.a},center,angle)}),
-                                std::make_pair<glm::vec2,glm::vec2>(rotatePoint({rect.x+rect.z,rect.y},center,angle),{rotatePoint({rect.x+rect.z,rect.y+rect.a},center,angle)})});
+    glm::vec2 topL = rotatePoint({rect.x,rect.y},center,angle);
+    glm::vec2 topR = rotatePoint({rect.x+rect.z,rect.y},center,angle);
+    glm::vec2 botL = rotatePoint({rect.x,rect.y+rect.a},center,angle);
+    glm::vec2 botR = rotatePoint({rect.x+rect.z,rect.y+rect.a},center,angle);
+       drawLine(program,color,{{topL.x,topL.y,topR.x,topR.y},
+                                {topL.x, topL.y, botL.x, botL.y},
+                                {topR.x,topR.y,botR.x,botR.y},
+                                {botL.x, botL.y, botR.x, botR.y}});
 }
-
-int loadShaders(const GLchar*source, GLenum shaderType )
-{
-    std::ifstream input;
-    input.open(source);
-    int shader = -1;
-    if (input.is_open())
-    {
-
-    std::stringstream stream;
-    stream << input.rdbuf();
-     shader = glCreateShader(shaderType);
-     std::string str = stream.str();
-    const char* code = str.c_str();
-    glShaderSource(shader,1, &code, NULL);
-    glCompileShader(shader);
-    int success;
-    char infoLog[512];
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        std::cout << "Error loading shader " << "source: " << infoLog << std::endl;
-    }
-    }
-    else
-    {
-        std::cout << "Can't open shader! Source: " << source << std::endl;
-    }
-    return shader;
-
-}
-
-void drawLine(RenderProgram& program, glm::vec3 color, const std::vector<std::pair<glm::vec2,glm::vec2>>& points)
+void drawLine(RenderProgram& program, glm::vec3 color, const std::vector<glm::vec4>& points)
 {
     int size = points.size();
     GLfloat buffer_data[size*6];/* = {points[0].first.x, points[0].first.y, 0,
@@ -173,11 +156,11 @@ void drawLine(RenderProgram& program, glm::vec3 color, const std::vector<std::pa
     for (int i = 0;i < size*6; i ++)
     {
         int modI = i/6;
-        buffer_data[i] = points[modI].first.x;
-        buffer_data[i+1] = points[modI].first.y;
+        buffer_data[i] = points[modI].x;
+        buffer_data[i+1] = points[modI].y;
         buffer_data[i+2] = 0;
-        buffer_data[i+3] = points[modI].second.x;
-        buffer_data[i+4] = points[modI].second.y;
+        buffer_data[i+3] = points[modI].z;
+        buffer_data[i+4] = points[modI].a;
         buffer_data[i+5] = 0;
         i+=5;
     }
@@ -203,6 +186,38 @@ glEnableVertexAttribArray(0);
     glDrawArraysInstanced(GL_LINES,0,size*2,size);
 
 }
+int loadShaders(const GLchar* source, GLenum shaderType )
+{
+    std::ifstream input;
+    input.open(source);
+    int shader = -1;
+    if (input.is_open())
+    {
+        std::stringstream stream;
+        stream << input.rdbuf();
+         shader = glCreateShader(shaderType);
+         std::string str = stream.str();
+        const char* code = str.c_str();
+        glShaderSource(shader,1, &code, NULL);
+        glCompileShader(shader);
+        int success;
+        char infoLog[512];
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+        if (!success)
+        {
+            glGetShaderInfoLog(shader, 512, NULL, infoLog);
+            std::cout << "Error loading shader " << "source: " << infoLog << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << "Can't open shader! Source: " << source << std::endl;
+    }
+    return shader;
+
+}
+
+
 RenderProgram::RenderProgram(std::string vertexPath, std::string fragmentPath)
 {
     init(vertexPath,fragmentPath);
@@ -218,6 +233,30 @@ void RenderProgram::init(std::string vertexPath, std::string fragmentPath)
     glLinkProgram(program);
     glDeleteShader(fragment);
     glDeleteShader(vertex);
+}
+void RenderProgram::init(int screenWidth, int screenHeight)
+{
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,SDL_GL_CONTEXT_PROFILE_CORE); //set version
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 3 );
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
+
+    glewExperimental = true;
+
+    GLenum err=glewInit();
+      if(err!=GLEW_OK) {
+        // Problem: glewInit failed, something is seriously wrong.
+        std::cout << "glewInit failed: " << glewGetErrorString(err) << std::endl;
+      }
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    RenderProgram::lineProgram.init("shaders/vertex/simpleVertex.h","shaders/fragment/simpleFragment.h");
+    glm::mat4 mat = (glm::ortho(0.0f, (float)screenWidth,(float)screenHeight, 0.0f, -1.0f, 1.0f));
+    lineProgram.setMatrix4fv("projection",glm::value_ptr(mat));
+    RenderProgram::basicProgram.init("shaders/vertex/vertexShader.h","shaders/fragment/fragmentShader.h");
+    basicProgram.setMatrix4fv("projection",glm::value_ptr(mat));
 }
 void RenderProgram::use()
 {
@@ -349,10 +388,9 @@ void Sprite::renderInstanced(RenderProgram& program, const std::vector<SpritePar
     for (int i = 0; i < size; i ++)
     {
         const SpriteParameter* current = &(*(parameters.begin() + i));
-
      //   std::cout << current.x << " " << current.y << std::endl;
         matrices[i] = glm::mat4(1.0f);
-        matrices[i] = glm::translate(matrices[i],{current->rect.x + current->rect.z/2,current->rect.y + current->rect.a/2,0});
+        matrices[i] = glm::translate(matrices[i],{current->rect.x + (current->rect.z*(current->rect.z != 2))/2,current->rect.y + (current->rect.a*(current->rect.a != 2))/2,0}); //scaling messes with the position of the object. If the object is being rendered to a size of 2x2, there is no reason to counteract the scaling.
         matrices[i] = glm::rotate(matrices[i], current->radians, glm::vec3(0,0,1));
         matrices[i] = glm::scale(matrices[i], {current->rect.z/2, current->rect.a/2,1});
         tints[i] = current->tint;
@@ -448,15 +486,22 @@ void Sprite9::renderInstanced(RenderProgram& program, const std::vector<SpritePa
     {
         const SpriteParameter* current = &parameters[i];
         glm::vec4 rect = current->rect;
+        bool tooWide = (widths.x+widths.y>rect.z); //whether or not the requested width is bigger than the frame portion;
+        bool tooHigh = (heights.x+heights.y>rect.a);
 
+        glm::vec2 modW = {widths.x-(widths.x+widths.y-rect.z)*.5*tooWide,widths.y-(widths.y+widths.x-rect.z)*.5*tooWide};
+        glm::vec2 modH = {heights.x-(heights.x+heights.y-rect.z)*.5*tooHigh,heights.y-(heights.y+heights.x-rect.z)*.5*tooHigh};
+        //std::cout << modW.x << " " << modW.y << std::endl;
         for ( int g = 0; g < 3; g ++)
         {
-            float horiz = (rect.z-widths.x-widths.y); //the width of the scalable parts.
-            float vert = rect.a- heights.x-heights.y; //the height of the scalable parts
+            float horiz = (rect.z-modW.x-modW.y)*!tooWide; //the width of the scalable parts. We also have to consider if the width is higher than the frame width
+            float vert = (rect.a- modH.x-modH.y)*!tooHigh;//the height of the scalable parts
             for (int h = 0; h < 3; h ++)
             {
-                portions.push_back({{rect.x + widths.x*(h > 0) + (horiz)*(h>1),rect.y + heights.x*(g>0) + (vert)*(g>1), widths.x*(h == 0) + horiz*(h==1)+widths.y*(h==2), heights.x*(g==0) + vert * (g == 1) + heights.y*(g==2)},
-                                   0,current->tint,{1.0/3*h,(1.0/3)*g,1.0/3,1.0/3}});
+                glm::vec4 r = {rect.x + modW.x*(h > 0) + (horiz)*(h>1),rect.y + modH.x*(g>0) + (vert)*(g>1), modW.x*(h == 0) + horiz*(h==1)+modW.y*(h==2), modH.x*(g==0) + vert * (g == 1) + modH.y*(g==2)};
+               glm::vec2 center = rotatePoint({r.x+r.z/2,r.y+r.a/2},{rect.x + rect.z/2, rect.y + rect.a/2},current->radians);
+               portions.push_back({{center.x - r.z/2,center.y - r.a/2,r.z,r.a},
+                                   current->radians,current->tint,{1.0/3*h,(1.0/3)*g,1.0/3,1.0/3}});
             }
         }
     }

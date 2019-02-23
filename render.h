@@ -19,15 +19,15 @@ bool pointInVec(const glm::vec4& vec1, double x, double y, double angle = 0); //
 bool lineInVec(const glm::vec2& p1, const glm::vec2& p2, const  glm::vec4& r1, double angle = 0); //angle of r1 is by default 0
 bool lineInLine(const glm::vec2& a1, const glm::vec2& a2, const glm::vec2& b1, const glm::vec2& b2);
 class RenderProgram;
-void drawLine(RenderProgram& program,glm::vec3 color,const std::vector<std::pair<glm::vec2,glm::vec2>>& points);
+void drawLine(RenderProgram& program,glm::vec3 color,const std::vector<glm::vec4>& points);
 glm::vec2 rotatePoint(const glm::vec2& p, const glm::vec2& rotateAround, double angle);
 void drawRectangle(RenderProgram& program, const glm::vec3& color, const glm::vec4& rect, double angle);
-
 
 class RenderProgram
 {
     unsigned int program;
 public:
+    static RenderProgram basicProgram, lineProgram; //basic allows for basic sprite rendering. Line program is simpler and renders lines.
     RenderProgram(std::string vertexPath, std::string fragmentPath);
     RenderProgram()
     {
@@ -38,7 +38,11 @@ public:
     void setVec4fv(std::string name, glm::vec4 value);
     void use();
     void init(std::string vertexPath, std::string fragmentPath);
+    static void init(int screenWidth, int screenHeight); //this init function initiates the basic renderprograms
 };
+
+//extern RenderProgram RenderProgram::basicProgram;
+//extern RenderProgram RenderProgram::lineProgram;
 
 struct SpriteParameter //stores a bunch of information regarding how to render the sprite
 {
@@ -46,11 +50,11 @@ struct SpriteParameter //stores a bunch of information regarding how to render t
     float radians = 0;
     glm::vec3 tint = {1,1,1};
     glm::vec4 portion = {0,0,1,1};
-
 };
 
 class Sprite
 {
+protected:
     int width = 0, height = 0;
     unsigned int texture = -1;
     float values[16] = {
@@ -96,8 +100,8 @@ public:
    // void map(RenderProgram& program,double width, double height,const glm::vec4& base, const std::vector<glm::vec2>& points);
 };
 
-class Sprite9 : public Sprite // This sprite has been split into 9 sections that each scale differently.
-{
+class Sprite9 : public Sprite // This sprite has been split into 9 sections that each scale differently. The corners aren't scaled at all, the top and bottom
+{                               //are only scaled horizontally, the sides are only scaled vertically, and the center can be centered any which way.
 
     glm::vec2 widths; //the widths of the frame on either side;
     glm::vec2 heights; //heights of the frame on either side;

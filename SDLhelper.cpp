@@ -66,3 +66,56 @@
     {
         return justPressed;
     }
+bool MouseManager::left = false;
+bool MouseManager::right = false;
+bool MouseManager::middle = false;
+int MouseManager::justClicked = -1;
+bool* MouseManager::getButton(int key)
+{
+    switch (key)
+    {
+    case SDL_BUTTON_LEFT:
+        return &left;
+        break;
+    case SDL_BUTTON_RIGHT:
+        return &right;
+        break;
+    case SDL_BUTTON_MIDDLE:
+        return &middle;
+        break;
+    }
+}
+void MouseManager::update(SDL_Event& e)
+{
+    if (e.type == SDL_MOUSEBUTTONDOWN)
+    {
+        bool* ptr = getButton(e.button.button);
+        if (*ptr == false)
+        {
+            justClicked = e.button.button;
+            *ptr = true;
+        }
+        else
+        {
+            justClicked = -1;
+        }
+    }
+    else
+    {
+        justClicked = -1;
+        if (e.type == SDL_MOUSEBUTTONUP)
+        {
+            *getButton(e.button.button) = false;
+        }
+
+    }
+}
+bool MouseManager::isPressed(int key)
+{
+    return *getButton(key);
+}
+
+int MouseManager::getJustClicked()
+{
+    return justClicked;
+}

@@ -3,7 +3,13 @@
 #include FT_FREETYPE_H
 #include "FreeTypeHelper.h"
 
+RenderProgram Font::wordProgram;
 
+    void Font::init(int screenWidth, int screenHeight)
+    {
+        wordProgram.init("shaders/vertex/wordVertex.h","shaders/fragment/wordFragment.h");
+        wordProgram.setMatrix4fv("projection", glm::value_ptr(glm::ortho(0.0f, (float)screenWidth,0.0f,(float)screenHeight)));
+    }
     Font::Font(std::string source, int w,int h)
     {
         init(source,w,h);
@@ -88,7 +94,7 @@ glm::vec2 Font::getDimen(std::string text, GLfloat scale)
     }
     return {totalWidth,maxHeight};
 }
-glm::vec2 Font::write(RenderProgram& p, std::string shaderName,std::string text, GLfloat x, GLfloat y, GLfloat scale,glm::vec3 color)
+glm::vec2 Font::write(RenderProgram& p,std::string text, GLfloat x, GLfloat y, GLfloat scale,glm::vec3 color)
 {
     // Activate corresponding render state
 

@@ -28,6 +28,21 @@ public:
 
 };
 
+class MouseManager
+{
+    static int justClicked;
+    static bool left;
+    static bool right;
+    static bool middle;
+    static bool* getButton(int key); //helper function that returns the boolean corresponding to the key pressed
+public:
+   static void update(SDL_Event& e);
+    static int getJustClicked();
+    static bool isPressed(int key);
+
+
+
+};
 
 
 #endif // SDLHELPER_H_INCLUDED

@@ -33,6 +33,7 @@ class Font
         0,1,2,
         3,1,2};
 public:
+    static RenderProgram wordProgram;
     Font(std::string source, int w,int h);
     Font()
     {
@@ -40,10 +41,11 @@ public:
     }
     void init(std::string source, int w, int h);
     glm::vec2 getDimen(std::string text, GLfloat scale); //gets the dimensions on text printed if the text were to be printed.
-    glm::vec2 write(RenderProgram& p,std::string shadeName, std::string text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color);
+    glm::vec2 write(RenderProgram& p, std::string text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color);
     ~Font()
     {
         characters.clear();
     }
+    static void init(int screenWidth,int screenHeight); //initializes wordProgram
     };
 #endif // FREETYPEHELPER_H_INCLUDED
