@@ -239,6 +239,12 @@ std::string convert(int input) //takes an int and returns the int in string form
     return os.str();
 }
 
+double randomDecimal(int places)
+{
+    int power = pow(10, places);
+    return rand()%(power)/((double)power);
+}
+
 double convert(std::string input)
 {
   for (int i = 0; i < input.length(); i ++) // checks to see if the input has non-digits in it.

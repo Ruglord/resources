@@ -1,15 +1,11 @@
 #version 330 core
-
-layout (location = 0) in vec4 values;
+layout (location = 0) in vec4 vertex; // <vec2 pos, vec2 tex>
+out vec2 TexCoords;
 
 uniform mat4 projection;
 
-out vec2 texCoord;
-out vec3 shade;
-
 void main()
 {
-    gl_Position =projection*vec4(values.xy,0,1);
-    texCoord = values.ba;
-
+    gl_Position = projection*vec4(vertex.xy, 0.0, 1.0);
+    TexCoords = vertex.zw;
 }

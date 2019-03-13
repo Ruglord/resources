@@ -323,6 +323,7 @@ public:
     }
 };
 
+double randomDecimal(int places); //generates a random decimal between 0 and 1, not including 1. places is the number of decimal places
 int findIntLength(int x);
 std::string convert(double input);
 

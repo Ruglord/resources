@@ -434,7 +434,6 @@ glEnableVertexAttribArray(7);
 glVertexAttribPointer(7,4,GL_FLOAT,GL_FALSE,0,0);
 glVertexAttribDivisor(7,1);
 
-
 loadBuffers();
 
 glBindTexture(GL_TEXTURE_2D,texture);
@@ -453,7 +452,6 @@ glDeleteBuffers(1,&transform);
 glDeleteBuffers(1,&colors);
 
 glDeleteBuffers(1,&parts);
-
     }
   /*  else
     {
@@ -506,4 +504,33 @@ void Sprite9::renderInstanced(RenderProgram& program, const std::vector<SpritePa
         }
     }
     Sprite::renderInstanced(program, portions);
+}
+
+BaseAnimation::BaseAnimation(std::string source, bool transparent, double speed, int perRow, int rows)
+{
+    init(source,transparent,speed,perRow,rows);
+}
+void BaseAnimation::init(std::string source, bool transparent, double speed, int perRow, int rows)
+{
+    Sprite::init(source, transparent);
+    fps = speed;
+    frameDimen.x = 1.0/(perRow);
+    frameDimen.y = 1.0/(rows);
+}
+void BaseAnimation::renderInstanced(RenderProgram& program, const std::vector<AnimationParameter>& parameters)
+{
+    int size = parameters.size();
+    std::vector<SpriteParameter> param;
+    int perRow = 1/frameDimen.x; //frame per rows
+    int rows = 1/frameDimen.y; //number of rows
+    double current =  SDL_GetTicks();
+    for (int i = 0; i < size; i ++)
+    {
+        const AnimationParameter* ptr = &parameters[i];
+        double timeSince = current - ptr->start;
+        int framesSince = ((ptr->fps == -1)*fps + (ptr->fps != -1)*ptr->fps)*timeSince; //frames per second
+        param.push_back({ptr->rect,ptr->radians,ptr->tint,{frameDimen.x*(framesSince%(perRow)),
+                                                            (frameDimen.y*((framesSince/perRow)%rows)),frameDimen.x, frameDimen.y}});
+    }
+    Sprite::renderInstanced(program, param);
 }

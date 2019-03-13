@@ -50,6 +50,15 @@ struct SpriteParameter //stores a bunch of information regarding how to render t
     float radians = 0;
     glm::vec3 tint = {1,1,1};
     glm::vec4 portion = {0,0,1,1};
+    std::vector<float> modified = { //values except not const, so it can be modified
+    -1, 1, 0, 1,
+    1, 1, 1, 1,
+    -1, -1, 0, 0,
+    1, -1, 1, 0
+    };
+    std::vector<int> modIndices= {
+    0, 1, 3,
+    0, 2, 3};
 };
 
 class Sprite
@@ -69,16 +78,14 @@ protected:
     1, 1, 1, 1,
     -1, -1, 0, 0,
     1, -1, 1, 0
-
     };
     int indices[6] = {
     0,1,3,
     0,2,3
     };
-    std::vector<float> modIndices = {
-    0,1,3,
-    0,2,3
-    };
+    std::vector<int> modIndices= {
+    0, 1, 3,
+    0, 2, 3};
     glm::vec3 tint;
     unsigned int VBO=-1, VAO=-1;
     void load(std::string source,bool transparent);
@@ -116,4 +123,26 @@ public:
 
 };
 
+struct AnimationParameter //the main difference between this class and SpriteParameters is that this one doesn't provide portion info and instead the time at which the animation started
+{
+    glm::vec4 rect = {0,0,0,0};
+    double start = -1; //the time at which the animation started, -1 if it hasn't started
+    double fps = -1; //the fps for the animation. -1 means use the default
+    float radians = 0;
+    glm::vec3 tint = {1,1,1};
+};
+
+class BaseAnimation : public Sprite //the actual animation object
+{
+    double fps = 0;
+    glm::vec2 frameDimen;
+public:
+    BaseAnimation(std::string source, bool transparent, double speed, int perRow, int rows);
+    BaseAnimation()
+    {
+
+    }
+    void init(std::string source, bool transparent, double speed, int perRow, int rows); //how many frames per row and how many rows there are
+    void renderInstanced(RenderProgram& program, const std::vector<AnimationParameter>& parameters);
+};
 #endif // SPRITES_H_INCLUDED
