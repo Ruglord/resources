@@ -50,13 +50,13 @@ struct SpriteParameter //stores a bunch of information regarding how to render t
     float radians = 0;
     glm::vec3 tint = {1,1,1};
     glm::vec4 portion = {0,0,1,1};
-    std::vector<float> modified = { //values except not const, so it can be modified
+    std::vector<float> vertices = {
     -1, 1, 0, 1,
     1, 1, 1, 1,
     -1, -1, 0, 0,
     1, -1, 1, 0
     };
-    std::vector<int> modIndices= {
+    std::vector<int> indices= {
     0, 1, 3,
     0, 2, 3};
 };
@@ -96,7 +96,10 @@ public:
         texture = -1;
     }
     void init(std::string source, bool transparent);
-    void loadBuffers() const;
+    void loadVertices();
+    void loadVertices(const std::vector<float>& verticies);
+
+    template<class T>void loadBuffer(unsigned int& buffer, int location, T arr[], int size, int dataSize, int divisor = 0); //data size is how much data per entry. Divisor is how for glvertexAttribDivisor. Default 0
   //  virtual void render(RenderProgram& program, SpriteParameter parameter);
     virtual void renderInstanced(RenderProgram& program, const std::vector<SpriteParameter>& parameters);
     unsigned int getVAO();

@@ -326,7 +326,7 @@ void Sprite::init(std::string source, bool transparent)
     {
         load(source, transparent);
     }
-void Sprite::loadBuffers() const
+void Sprite::loadVertices()
 {
            //glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER,VBO);
@@ -336,9 +336,21 @@ void Sprite::loadBuffers() const
         {
             verticies[i] = modified[i];
         }
-        glBufferData(GL_ARRAY_BUFFER, sizeof(float)*size, verticies, GL_STATIC_DRAW);
-        glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,0,0);
+        loadBuffer<float>(VBO,0,verticies,size,4,0);
+}
+void Sprite::loadVertices(const std::vector<float>& vert)
+{
+        int size = vert.size();
+        float verticies[size];
+        for (int i = 0; i < size; i ++)
+        {
+            verticies[i] = vert[i];
+        }
+        glBindBuffer(GL_ARRAY_BUFFER,VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(verticies),verticies, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,0,0);
+
 }
 void Sprite::reset()
 {
@@ -372,6 +384,20 @@ void Sprite::flip() //flips the sprite vertically
         modified[first] = ((int)modified[first]+1)%2;
     }
 }
+
+template<class T>
+void Sprite::loadBuffer(unsigned int& buffers,int location, T arr[], int size, int dataSize, int divisor)
+{
+glGenBuffers(1,&buffers);
+glBindBuffer(GL_ARRAY_BUFFER, buffers);
+glBufferData(GL_ARRAY_BUFFER, sizeof(*arr)*size, arr, GL_STATIC_DRAW);
+glEnableVertexAttribArray(location);
+glVertexAttribPointer(location,dataSize,GL_FLOAT,GL_FALSE,0,0);
+glVertexAttribDivisor(location,divisor);
+
+//glDeleteBuffers(1,&buffers);
+}
+
 void Sprite::renderInstanced(RenderProgram& program, const std::vector<SpriteParameter>& parameters)
 {
        // if (true)
@@ -382,6 +408,7 @@ void Sprite::renderInstanced(RenderProgram& program, const std::vector<SpritePar
     glm::mat4 matrices[size];
     glm::vec3 tints[size];
     glm::vec4 portions[size];
+    std::vector<float> vec;
  //   std::cout << scale.x<< scale.y << std::endl;
    // glm::vec3 adjust(-(1-scale.x), 1- (scale.y),0);
     //std::cout << adjust.x << " " << adjust.y << std::endl;
@@ -395,6 +422,14 @@ void Sprite::renderInstanced(RenderProgram& program, const std::vector<SpritePar
         matrices[i] = glm::scale(matrices[i], {current->rect.z/2, current->rect.a/2,1});
         tints[i] = current->tint;
         portions[i] = current->portion;
+        int vertAmount = current->indices.size();
+        for (int j = 0; j < vertAmount; j ++)
+        {
+            for (int z = 0; z < 4; z++)
+            {
+                vec.push_back(current->vertices[current->indices[j]*4+z]);
+            }
+        }
    }
     glBindVertexArray(VAO);
     unsigned int transform;
@@ -416,25 +451,14 @@ glVertexAttribDivisor(4, 1);
 glVertexAttribDivisor(5, 1);
 glVertexAttribDivisor(6, 1);
 
-
-unsigned int colors;
-glGenBuffers(1,&colors);
-glBindBuffer(GL_ARRAY_BUFFER, colors);
-glBufferData(GL_ARRAY_BUFFER, sizeof(tints), tints, GL_STATIC_DRAW);
-glEnableVertexAttribArray(2);
-glVertexAttribPointer(2,3,GL_FLOAT,GL_FALSE,0,0);
-glVertexAttribDivisor(2,1);
-
+unsigned int color;
+loadBuffer<glm::vec3>(color,2,tints,size,3,1);
 
 unsigned int parts;
-glGenBuffers(1,&parts);
-glBindBuffer(GL_ARRAY_BUFFER, parts);
-glBufferData(GL_ARRAY_BUFFER, sizeof(portions),portions, GL_STATIC_DRAW);
-glEnableVertexAttribArray(7);
-glVertexAttribPointer(7,4,GL_FLOAT,GL_FALSE,0,0);
-glVertexAttribDivisor(7,1);
+loadBuffer<glm::vec4>(parts,7,portions,size,4,1);
 
-loadBuffers();
+loadVertices(vec);
+//loadVertices();
 
 glBindTexture(GL_TEXTURE_2D,texture);
 int sizeI = modIndices.size();
@@ -443,13 +467,13 @@ for (int i = 0; i < sizeI; i ++)
 {
     index[i] = modIndices[i];
 }
-glDrawElementsInstanced(GL_TRIANGLES,sizeI,GL_UNSIGNED_INT,&index,size);
+glDrawArraysInstanced(GL_TRIANGLES,0,sizeI,size);
 glBindVertexArray(0);
 glBindBuffer(GL_ARRAY_BUFFER,0);
 reset();
 glDeleteBuffers(1,&transform);
 
-glDeleteBuffers(1,&colors);
+glDeleteBuffers(1,&color);
 
 glDeleteBuffers(1,&parts);
     }
